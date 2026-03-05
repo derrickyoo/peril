@@ -54,6 +54,7 @@ async function main() {
       process.exit(0);
     } else {
       console.log("Uknown command");
+      continue;
     }
   }
 }
