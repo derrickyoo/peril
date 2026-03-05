@@ -9,12 +9,12 @@ import {
 import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandMove } from "../internal/gamelogic/move.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
-import { declareAndBind, SimpleQueueType } from "../internal/pubsub/consume.js";
+import { SimpleQueueType, subscribeJSON } from "../internal/pubsub/consume.js";
 import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
+import { handlerPause } from "./handlers.js";
 
 async function main() {
   console.log("Starting Peril client...");
-
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
   const conn = await amqp.connect(rabbitConnString);
   console.log("Peril game client connected to RabbitMQ!");
@@ -33,16 +33,16 @@ async function main() {
   );
 
   const username = await clientWelcome();
+  const gs = new GameState(username);
 
-  const [channel, queue] = await declareAndBind(
+  await subscribeJSON(
     conn,
     ExchangePerilDirect,
     `${PauseKey}.${username}`,
     PauseKey,
     SimpleQueueType.Transient,
+    handlerPause(gs),
   );
-
-  const gs = new GameState(username);
 
   while (true) {
     const words = await getInput();
