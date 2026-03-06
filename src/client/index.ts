@@ -7,14 +7,16 @@ import {
   printQuit,
 } from "../internal/gamelogic/gamelogic.js";
 import { GameState } from "../internal/gamelogic/gamestate.js";
+import type { GameLog } from "../internal/gamelogic/logs.js";
 import { commandMove } from "../internal/gamelogic/move.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { SimpleQueueType, subscribeJSON } from "../internal/pubsub/consume.js";
-import { publishJSON } from "../internal/pubsub/publish.js";
+import { publishJSON, publishMsgPack } from "../internal/pubsub/publish.js";
 import {
   ArmyMovesPrefix,
   ExchangePerilDirect,
   ExchangePerilTopic,
+  GameLogSlug,
   PauseKey,
   WarRecognitionsPrefix,
 } from "../internal/routing/routing.js";
@@ -66,7 +68,7 @@ async function main() {
     WarRecognitionsPrefix,
     `${WarRecognitionsPrefix}.*`,
     SimpleQueueType.Durable,
-    handlerWar(gs),
+    handlerWar(gs, publishCh),
   );
 
   while (true) {
@@ -107,6 +109,25 @@ async function main() {
       continue;
     }
   }
+}
+
+export function publishGameLog(
+  ch: amqp.ConfirmChannel,
+  username: string,
+  message: string,
+): Promise<void> {
+  const log: GameLog = {
+    currentTime: new Date(),
+    message,
+    username,
+  };
+
+  return publishMsgPack(
+    ch,
+    ExchangePerilTopic,
+    `${GameLogSlug}.${username}`,
+    log,
+  );
 }
 
 main().catch((err) => {
