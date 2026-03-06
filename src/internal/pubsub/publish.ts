@@ -1,5 +1,5 @@
+import { encode } from "@msgpack/msgpack";
 import { type ConfirmChannel } from "amqplib";
-import { encode, decode } from "@msgpack/msgpack";
 
 export function publishJSON<T>(
   ch: ConfirmChannel,
