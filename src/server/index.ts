@@ -1,6 +1,9 @@
 import amqp from "amqplib";
 import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
-import { declareAndBind, SimpleQueueType } from "../internal/pubsub/consume.js";
+import {
+  SimpleQueueType,
+  subscribeMsgPack,
+} from "../internal/pubsub/consume.js";
 import { publishJSON } from "../internal/pubsub/publish.js";
 import {
   ExchangePerilDirect,
@@ -8,6 +11,7 @@ import {
   GameLogSlug,
   PauseKey,
 } from "../internal/routing/routing.js";
+import { handlerLog } from "./handlers.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
@@ -29,12 +33,13 @@ async function main() {
 
   const publishCh = await conn.createConfirmChannel();
 
-  declareAndBind(
+  subscribeMsgPack(
     conn,
     ExchangePerilTopic,
     GameLogSlug,
     `${GameLogSlug}.*`,
     SimpleQueueType.Durable,
+    handlerLog(),
   );
 
   printServerHelp();
@@ -44,7 +49,6 @@ async function main() {
     if (words.length === 0) continue;
 
     const command = words[0];
-
     if (command === "pause") {
       console.log("Publishing paused game state");
       try {
@@ -52,7 +56,7 @@ async function main() {
           isPaused: true,
         });
       } catch (err) {
-        console.error("Error publishing pause message: ", err);
+        console.error("Error publishing pause message:", err);
       }
     } else if (command === "resume") {
       console.log("Publishing resumed game state");
@@ -67,8 +71,7 @@ async function main() {
       console.log("Goodbye!");
       process.exit(0);
     } else {
-      console.log("Uknown command");
-      continue;
+      console.log("Unknown command");
     }
   }
 }
