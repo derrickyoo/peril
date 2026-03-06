@@ -18,9 +18,8 @@ export async function declareAndBind(
   key: string,
   queueType: SimpleQueueType,
 ): Promise<[Channel, amqp.Replies.AssertQueue]> {
-  const channel = await conn.createChannel();
-
-  const queue = await channel.assertQueue(queueName, {
+  const ch = await conn.createChannel();
+  const queue = await ch.assertQueue(queueName, {
     durable: queueType === SimpleQueueType.Durable,
     exclusive: queueType !== SimpleQueueType.Durable,
     autoDelete: queueType !== SimpleQueueType.Durable,
@@ -29,8 +28,8 @@ export async function declareAndBind(
     },
   });
 
-  await channel.bindQueue(queue.queue, exchange, key);
-  return [channel, queue];
+  await ch.bindQueue(queue.queue, exchange, key);
+  return [ch, queue];
 }
 
 export async function subscribeJSON<T>(

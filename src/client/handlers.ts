@@ -1,4 +1,4 @@
-import type { ConfirmChannel } from "amqplib";
+import type { Channel, ConfirmChannel } from "amqplib";
 import type {
   ArmyMove,
   RecognitionOfWar,
@@ -9,13 +9,13 @@ import type {
 } from "../internal/gamelogic/gamestate.js";
 import { handleMove, MoveOutcome } from "../internal/gamelogic/move.js";
 import { handlePause } from "../internal/gamelogic/pause.js";
-import { handleWar, WarOutcome } from "../internal/gamelogic/war.js";
 import { AckType } from "../internal/pubsub/consume.js";
 import { publishJSON } from "../internal/pubsub/publish.js";
 import {
   ExchangePerilTopic,
   WarRecognitionsPrefix,
 } from "../internal/routing/routing.js";
+import { handleWar, WarOutcome } from "../internal/gamelogic/war.js";
 
 export function handlerPause(gs: GameState): (ps: PlayingState) => AckType {
   return (ps: PlayingState): AckType => {
@@ -34,6 +34,7 @@ export function handlerMove(
       const outcome = handleMove(gs, move);
       switch (outcome) {
         case MoveOutcome.Safe:
+        case MoveOutcome.SamePlayer:
           return AckType.Ack;
         case MoveOutcome.MakeWar:
           const recognition: RecognitionOfWar = {
@@ -48,9 +49,9 @@ export function handlerMove(
               `${WarRecognitionsPrefix}.${gs.getUsername()}`,
               recognition,
             );
-            return AckType.Ack;
           } catch (err) {
             console.error("Error publishing war recognition:", err);
+          } finally {
             return AckType.NackRequeue;
           }
         default:
