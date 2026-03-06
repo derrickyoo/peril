@@ -51,7 +51,7 @@ async function main() {
     `${ArmyMovesPrefix}.${username}`,
     `${ArmyMovesPrefix}.*`,
     SimpleQueueType.Transient,
-    handlerMove(gs),
+    handlerMove(gs, publishCh),
   );
 
   await subscribeJSON(
