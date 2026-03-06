@@ -9,6 +9,7 @@ import type {
 } from "../internal/gamelogic/gamestate.js";
 import { handleMove, MoveOutcome } from "../internal/gamelogic/move.js";
 import { handlePause } from "../internal/gamelogic/pause.js";
+import { handleWar, WarOutcome } from "../internal/gamelogic/war.js";
 import { AckType } from "../internal/pubsub/consume.js";
 import { publishJSON } from "../internal/pubsub/publish.js";
 import {
@@ -53,6 +54,33 @@ export function handlerMove(
             return AckType.NackRequeue;
           }
         default:
+          return AckType.NackDiscard;
+      }
+    } finally {
+      process.stdout.write("> ");
+    }
+  };
+}
+
+export function handlerWar(
+  gs: GameState,
+): (war: RecognitionOfWar) => Promise<AckType> {
+  return async (war: RecognitionOfWar): Promise<AckType> => {
+    try {
+      const outcome = handleWar(gs, war);
+
+      switch (outcome.result) {
+        case WarOutcome.NotInvolved:
+          return AckType.NackRequeue;
+        case WarOutcome.NoUnits:
+          return AckType.NackDiscard;
+        case WarOutcome.YouWon:
+        case WarOutcome.OpponentWon:
+        case WarOutcome.Draw:
+          return AckType.Ack;
+        default:
+          const unreachable: never = outcome;
+          console.log("Unexpected war resolution: ", unreachable);
           return AckType.NackDiscard;
       }
     } finally {
